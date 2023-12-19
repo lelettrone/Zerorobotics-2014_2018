@@ -1,0 +1,150 @@
+//Begin page funzioni
+ void goTarget(float Target[3]){ //MADE BY RICCIO-CESARANO 01/07/2015
+    float myState[12];
+    api.getMyZRState(myState);
+    float myVelocity[]={myState[3],myState[4],myState[5]};
+    float myPosition[]={myState[0],myState[1],myState[2]};
+    float idealVector[3],realVector[3];
+    mathVecSubtract(idealVector,Target,myPosition,3);
+    mathVecSubtract(realVector,idealVector,myVelocity,3);
+    mathVecNormalize(realVector,3);
+    mathVecMult(realVector,realVector,0.075f,3);
+    api.setVelocityTarget(realVector);
+}  
+   
+/*float getDistance(float a[13], float b[13]){//MADE BY RICCIO-CESARANO 01/07/2015
+	float distance = sqrt(((a[0]-b[0])*(a[0]-b[0]))+
+					((a[1]-b[1])*(a[1]-b[1])) +
+					((a[2]-b[2])*(a[2]-b[2])));
+	return distance;
+}*/
+float getDistance(float a[13], float b[13]){//MADE BY RICCIO-CESARANO 01/07/2015
+	float distance = sqrt(((a[0]-b[0])*(a[0]-b[0]))+
+					((a[1]-b[1])*(a[1]-b[1])));
+	return distance;
+}
+   
+void MotoCircolare(float r){
+    //alfa+=7.95*PI/180;
+    float point[3];
+    point[0]=(r*sinf(alfa))*-1;
+    point[1]=(r*cosf(alfa))*-1;
+    point[2]=0;
+    api.getMyZRState(myState);
+    float vectorBetween[3];
+    mathVecSubtract(vectorBetween,point,myState,3);
+    mathVecNormalize(vectorBetween,3);
+    for(int i=0;i<3;i++){
+        vectorBetween[i]=vectorBetween[i]*0.084;//0.078 //0.80 //0.84
+    }
+    alfa += 0.10; //0.10
+    api.setVelocityTarget(vectorBetween);
+}
+
+
+void setConstantVelocityTo(float point[], float k)
+{
+	    float myState[12];
+		float velocityVector[3];
+		api.getMyZRState(myState);
+		mathVecSubtract(velocityVector, point, myState, 3);
+		mathVecNormalize(velocityVector, 3);
+		velocityVector[0] *= k;	
+		velocityVector[1] *= k;
+		velocityVector[2] *= k;
+		api.setVelocityTarget(velocityVector);
+}
+
+void mathVecMult (float *v, float *a, float k, int dim){
+    int i;
+    for (i=0; i<dim; i++){
+        v[i]=a[i]*k;
+    }
+}
+bool getColor(){//MADE BY CESARANO
+    return ((myState[1] <0.0f) ? 0 : 1);
+}
+//End page funzioni
+//Begin page main
+float alfa; 
+float myState[12];
+float Radius;
+float pointoncircle[3];
+float doveandare[3];
+float penultimopunto[3];
+float ultimopunto[3];
+bool gotocircle;
+bool ritorna;
+float Point0[3],Point1[3],Point2[3];
+void init(){
+    gotocircle=false;
+    ritorna=false;
+    pointoncircle[0]=0.5f;
+    pointoncircle[1]=0.5f;
+    pointoncircle[2]=0.0f;
+    
+    
+    penultimopunto[0]=0.5f;
+    penultimopunto[1]=-0.5f;
+    penultimopunto[2]=0.0f;
+    
+    ultimopunto[0]=0.0f;
+    ultimopunto[1]=-0.48f;
+    ultimopunto[2]=0.0f;
+    
+    doveandare[0]=-0.327f;
+    doveandare[1]=-0.627f;
+    doveandare[2]=0.0f;
+    Radius = 0.693f; //0.693
+    alfa = 0.28;//-0.28f;
+    Point0[0]=-0.60f;
+    Point0[1]=-0.40f;
+    Point0[2]=0.0f;
+    
+    Point1[0]=-0.50f;
+    Point1[1]=0.50f;
+    Point1[2]=0.00f;
+    
+    Point2[0]=0.50f;
+    Point2[1]=0.50f;
+    Point2[2]=0.00f;
+
+}
+
+void loop(){
+    api.getMyZRState(myState);
+    
+    if(getDistance(myState,Point0)<0.025){
+        Radius=0.684f; //0.673
+
+    }
+    
+    if(getDistance(myState,Point1)<0.055){
+        Radius=0.6615f; //0.673
+
+    }
+    if(getDistance(myState,Point2)<0.05){
+        Radius = 0.680f;
+    }
+     
+    
+    if(getDistance(doveandare,myState)<0.328f){ //0.334  //0.3375
+       gotocircle=true;
+    }
+    
+    if(getDistance(penultimopunto,myState)<0.33f){
+        ritorna=true;
+    }
+   
+    if(!gotocircle){
+       setConstantVelocityTo(doveandare,0.06f); //0.06
+    }else{
+        if(!ritorna){
+            MotoCircolare(Radius);
+        }else{
+            DEBUG(("ci sono"));
+            goTarget(ultimopunto);
+        }
+    }
+}
+//End page main

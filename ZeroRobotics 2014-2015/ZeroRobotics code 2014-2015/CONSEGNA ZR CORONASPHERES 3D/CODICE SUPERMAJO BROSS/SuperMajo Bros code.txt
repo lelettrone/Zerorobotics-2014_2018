@@ -1,0 +1,312 @@
+// We define the game phases
+#define INNER  0
+#define OUTER  1
+#define UPLOAD 2
+
+// We define other constants
+#define ANGLE_INNER   0.80
+#define ANGLE_OUTER   0.40
+#define RADIUS_INNER  0.35
+#define RADIUS_OUTER  0.50
+#define RADIUS_UPLOAD 0.55
+
+// We define the variables relating to the game phases
+int nextF, time;
+int step, target[3];
+int photo, sequence;
+
+// We define the variables relating to our sphere
+float myState[12];
+float frsPOI[3], sndPOI[3], trdPOI[3];
+float dist1, dist2, dist3;
+float picPos[3];
+float center[3];
+
+
+
+void init()
+{
+    // We initialize the center of the asteroid
+    center[0] = 0;
+    center[1] = 0;
+    center[2] = 0;
+    
+    // We initialize the time and the game sequence
+    sequence = 0;
+    time = 0;
+}
+
+void loop()
+{
+    // Acquires the missing time to the next solar flare
+    nextF = game.getNextFlare();
+    DEBUG(("Next Flare = %d\n", nextF));
+    
+    // Calculate my position and the position of the points to photograph
+    api.getMyZRState(myState);
+    game.getPOILoc(frsPOI, 0);
+    game.getPOILoc(sndPOI, 1);
+    game.getPOILoc(trdPOI, 2);
+    
+    // In sequence exchange we initialize the variables
+    if(time == sequence)
+    {
+        target[0] = 0;
+        target[1] = 1;
+        target[2] = 2;
+        sequence = sequence + 60;
+        
+        if(step != UPLOAD)
+        {
+            step = INNER;
+            photo = 0;
+        }
+        else
+            photo = -1;
+    }
+    time++;
+	
+	
+	// I turn off the engines when solar flare is imminent
+	if(nextF == 2)
+	{
+        game.turnOff();
+        DEBUG(("I am turned off\n"));
+	}
+    else
+    {
+        // I turn on the engines when solar flare is over
+        if(nextF == 1)
+        	game.turnOn();
+        
+            
+    	// I calculate distance from SPHERES to POI
+    	if(target[0] == 0)
+    	    dist1 = getDistance(myState, frsPOI);
+    	else dist1 = 2;
+    	if(target[1] == 1)
+    	    dist2 = getDistance(myState, sndPOI);
+    	else dist2 = 2;
+    	if(target[2] == 2)
+    	    dist3 = getDistance(myState, trdPOI);
+    	else dist3 = 2;
+    	
+    	
+    	// I search the closest POI
+    	if(dist1 < dist2)
+        {
+            if(dist1 < dist3)
+                gameTime(frsPOI, target[0]);
+            else
+                gameTime(trdPOI, target[2]);
+        }
+        else
+        {
+            if(dist2 < dist3)
+                gameTime(sndPOI, target[1]);
+            else
+                gameTime(trdPOI, target[2]);
+        }
+    }
+}
+
+
+
+// Function for the game
+void gameTime(float posPOI[3], int idPOI)
+{
+    switch(step)
+    {
+        case INNER:
+        {
+            if(game.getMemoryFilled() == 2)
+            {
+                DEBUG(("INNER - Photo taken\n"));
+                
+                step = UPLOAD;
+                photo++;
+            }
+            else if((game.getMemoryFilled() == 1) & (photo <= 2))
+            {
+                DEBUG(("INNER - Photo taken\n"));
+                
+                if((time < sequence - 10) & ((nextF > 22) | (nextF == -1)))
+                    step = OUTER;
+                else
+                    step = UPLOAD;
+                
+                photo++;
+            }
+            else
+            {
+                mathVecScale(picPos, posPOI, RADIUS_INNER);
+                api.getMyZRState(myState);
+                setPosFaster(1.5);
+                facePos(posPOI);
+                
+                if(time < sequence - 6)
+                {
+                    DEBUG(("INNER\n"));
+                    
+                    if((angleBetween(myState, posPOI) < ANGLE_INNER) & (getDistance(myState, center) < RADIUS_INNER))
+                    {
+                        if((nextF > 14) | (nextF == -1))
+                            game.takePic(idPOI);
+                    }
+                }
+                else
+                {
+                    DEBUG(("INNER - Failed\n"));
+                    step = OUTER;
+                }
+            }
+        }
+        break;
+        
+        case OUTER:
+        {
+            if(game.getMemoryFilled() == 2)
+            {
+                DEBUG(("OUTER - Photo taken\n"));
+                
+                step = UPLOAD;
+                photo++;
+            }
+            else if((game.getMemoryFilled() == 1) & (photo >= 3))
+            {
+                DEBUG(("OUTER - Photo taken\n"));
+                
+                if((time < sequence - 13) & (nextF == -1))
+                    step = INNER;
+                else
+                    step = UPLOAD;
+                    
+                photo++;
+            }
+            else
+            {
+                mathVecScale(picPos, posPOI, RADIUS_OUTER);
+                api.getMyZRState(myState);
+                setPosFaster(1.5);
+                facePos(posPOI);
+                
+                DEBUG(("OUTER\n"));
+                if((angleBetween(myState, posPOI) < ANGLE_OUTER) & (getDistance(myState, center) < RADIUS_OUTER + 0.02))
+                {
+                    if((nextF > 9) | (nextF == -1))
+                        game.takePic(idPOI);
+                }
+            }
+        }
+        break;
+            
+        case UPLOAD:
+        {
+            mathVecScale(picPos, posPOI, RADIUS_UPLOAD);
+            api.getMyZRState(myState);
+            setPosFaster(1.5);
+            
+            game.uploadPic();
+            if(game.getMemoryFilled() == 0)
+            {
+                DEBUG(("UPLOAD - Completed\n"));
+                
+                if(photo == -1)
+                {
+                    step = INNER;
+                    photo = 0;
+                }
+                else
+                {
+                    if(idPOI == 0)
+                        target[0] = -1;
+                    else if(idPOI == 1)
+                        target[1] = -1;
+                    else
+                        target[2] = -1;
+                    
+                    step = OUTER;
+                }
+            }
+            else
+                DEBUG(("UPLOAD\n"));
+        }
+        break;
+    }
+}
+
+
+
+// It returns the distance AB
+float getDistance(float *a, float *b) 
+{
+    float distanza;
+	float diff[3]; 
+	
+	mathVecSubtract(diff, a, b, 3);
+	distanza = mathVecMagnitude(diff, 3);
+	
+	return distanza;
+}
+
+// It returns angle between SPHERES and a point
+float angleBetween(float *inputA, float *inputB) 
+{
+    float a, b, arg, angle;
+    a = mathVecMagnitude(inputA, 3);
+	b = mathVecMagnitude(inputB, 3);
+		
+	if (a==0 || b==0)
+		angle = 0;
+	else
+	{
+	    arg = inputA[0] * inputB[0] + inputA[1] * inputB[1] + inputA[2] * inputB[2];
+		arg /= a * b;
+		
+		angle = acosf(arg);
+	}
+	
+	return angle;
+}
+
+// It rotates SPHERES toward POI 
+void facePos(float target[3]) 
+{
+		float attTarget[3];
+		
+		mathVecSubtract(attTarget, target, myState, 3);
+		mathVecNormalize(attTarget, 3);
+		api.setAttitudeTarget(attTarget);
+}
+
+// It find the coordinates from which take photo
+void mathVecScale(float res[3], float src[3], float mag) 
+{
+       memcpy(res, src, sizeof(float)*3);
+	   
+	   mathVecNormalize(res, 3);
+	   res[0] *= mag;
+	   res[1] *= mag;
+	   res[2] *= mag;
+}
+
+float setPosFaster(float k)
+{
+    float v[3], r;
+    
+    mathVecSubtract(v, picPos, myState, 3);
+    r = mathVecMagnitude(v, 3);
+    
+    mathVecMult(v, v, k, 3);
+    mathVecAdd(v, v, myState, 3);
+    api.setPositionTarget(v);
+    
+    return r;
+}
+
+void mathVecMult(float *v, float *a, float k, int dim)
+{
+    int i;
+    for(i = 0; i < dim; i++)
+        v[i] = a[i] * k;
+}

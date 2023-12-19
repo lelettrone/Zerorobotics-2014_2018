@@ -1,0 +1,27 @@
+
+http://zerorobotics.mit.edu/ide/simulation/1051043/
+
+http://zerorobotics.mit.edu/ide/simulation/1051058/
+
+
+http://zerorobotics.mit.edu/ide/simulation/1051228/ 0 errori nei punti, 0.01 rad in meno a quello previsto, daje così.
+
+
+
+
+http://zerorobotics.mit.edu/ide/simulation/1068751/
+
+
+http://zerorobotics.mit.edu/ide/simulation/1068807/ migliore per adesso
+
+http://zerorobotics.mit.edu/ide/simulation/1069230/ 3 CM DI ERRORE
+
+
+http://zerorobotics.mit.edu/ide/simulation/1069236/
+
+
+//MIGLIROE
+
+http://zerorobotics.mit.edu/ide/simulation/1069410/ 1 cm 40 secondi
+
+http://zerorobotics.mit.edu/ide/simulation/1068809/ MADRE MIA 1 CM DI ERRORE, ROTAZIONE PERFETTA, 9.8 PUNTI 39 secondi
